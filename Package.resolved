@@ -1,0 +1,16 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "PrettyColors",
+        "repositoryURL": "https://github.com/jdhealy/PrettyColors",
+        "state": {
+          "branch": null,
+          "revision": "afd4553a4db6f656521cfe9b1f70bece2748c7d8",
+          "version": "5.0.2"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
