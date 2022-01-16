@@ -11,9 +11,20 @@ let wordListSpacing = 2
 extension String: Error {}
 
 enum Fact: Hashable {
+    // The letter _ is in the word and in the correct spot.
     case placedAt(Character, Int)
+    // The letter _ is not in the word in any spot.
     case exclude(Character)
+    // The letter _ is in the word but in the wrong spot.
     case misplacedAt(Character, Int)
+    // This is an undocumented Fact:
+    // There is an existing fact placing the letter somewhere. Some additional placement has excluded it
+    case excludeWhereNotPlaced(Character)
+    // This is an undocumented Fact:
+    // There is an existing fact placing the letter somewhere. A second placement has indicated it is misplaced at this index, meaning
+    // it must be placed somewhere else. Such an observation should
+    // generate two facts: `misplacedAt` and a
+    case minimumOccurrenceCount(Character, Int)
 }
 
 struct Turn {
@@ -27,7 +38,7 @@ struct Turn {
     }
     
     func facts() -> [Fact] {
-        return zip(guess, feedback)
+        let factSet = zip(guess, feedback)
             .enumerated()
             .map { (index, pair) -> Fact in
                 let (guess, feedback) = pair
@@ -40,6 +51,42 @@ struct Turn {
                     return .misplacedAt(guess, index)
                 }
             }
+        return factSet.reduce(into: [Fact]()) { (accumulatedFacts, fact) in
+            
+            switch fact {
+            case let .misplacedAt(misplacedChar, _):
+                accumulatedFacts.append(fact)
+                let placedCharacterMatches = factSet.filter({ fact in
+                        if
+                            case let .placedAt(placedChar, _) = fact,
+                            placedChar == misplacedChar
+                        {
+                            return true
+                        }
+                        return false
+                    })
+                if placedCharacterMatches.count > 0 {
+                    accumulatedFacts.append(.minimumOccurrenceCount(misplacedChar, placedCharacterMatches.count + 1))
+                }
+            case let .exclude(misplacedChar):
+                if nil != factSet.first(where: { fact in
+                        if
+                            case let .placedAt(placedChar, _) = fact,
+                            placedChar == misplacedChar
+                        {
+                            return true
+                        }
+                        return false
+                    })
+                {
+                    accumulatedFacts.append(.excludeWhereNotPlaced(misplacedChar))
+                } else {
+                    accumulatedFacts.append(fact)
+                }
+            default:
+                accumulatedFacts.append(fact)
+            }
+        }
     }
 }
 
@@ -53,6 +100,10 @@ struct WordList {
             return []
         }
         return s.split(separator: "\n").map(String.init)
+    }
+    
+    internal init(words: [String]) {
+        data = (words.joined(separator: "\n") + "\n").data(using: .utf8)!
     }
     
     private init(data: Data) {
@@ -84,52 +135,60 @@ let grepURL: URL = {
     return url
 }()
 
-var wordList = try! WordList().filterMatching("^[a-z]\\{5\\}$")
 
-var accumulatedFacts: Set<Fact> = []
-var turns: [Turn] = []
-while true {
-    let turn = try Turn.get()
-    turns.append(turn)
-    accumulatedFacts.formUnion(turn.facts())
-    
-    let localList = try wordList.filter(with: accumulatedFacts)
-    
-    print(localList.display())
-    
-    try turns.forEach { t throws in
-        print("\(t.display())")
-    }
-    if localList.words.count == 1 {
-        break
+func game(wordLength: Int, grepURL: URL) throws {
+    let wordList = try! WordList().filterMatching("^[a-z]\\{5\\}$", grepURL: grepURL)
+
+    var accumulatedFacts: Set<Fact> = []
+    var turns: [Turn] = []
+    while true {
+        let turn = try Turn.get()
+        turns.append(turn)
+        accumulatedFacts.formUnion(turn.facts())
+        
+        let localList = try wordList.filter(with: accumulatedFacts, wordLength: wordLength, grepURL: grepURL)
+        
+        print(localList.display())
+        
+        try turns.forEach { t throws in
+            print("\(t.display())")
+        }
+        if localList.words.count == 1 {
+            break
+        }
     }
 }
+
+try game(wordLength: wordLength, grepURL: grepURL)
+
 
 // MARK: - Fact to Regex
 
 extension WordList {
-    func filter(with fact: Fact) throws -> WordList{
+    func filter(with fact: Fact, grepURL: URL) throws -> WordList{
         switch fact {
         case .exclude(let char):
-            return try filterMatching(String(char), invert: true)
+            return try filterMatching(String(char), grepURL: grepURL, invert: true)
         case .misplacedAt(let char, _):
-            return try filterMatching(String(char))
+            return try filterMatching(String(char), grepURL: grepURL)
+        case .minimumOccurrenceCount(let char, let count):
+            return try filterMatching(Array(repeating: char, count: count).map(String.init).joined(separator: ".*"), grepURL: grepURL)
         default:
             return self
         }
     }
     
-    func filter<F: Collection>(with facts: F) throws -> WordList where F.Element == Fact {
-        var localList = try wordList.filterMatching(facts.positionalRegex())
+    func filter<F: Collection>(with facts: F, wordLength: Int, grepURL: URL) throws -> WordList where F.Element == Fact {
+        var localList = try self.filterMatching(facts.positionalRegex(wordLength), grepURL: grepURL)
         try facts.forEach { fact throws in
-            localList = try localList.filter(with: fact)
+            localList = try localList.filter(with: fact, grepURL: grepURL)
         }
         return localList
     }
 }
 
 extension Collection where Element == Fact {
-    func positionalRegex(_ wordLength: Int = wordLength) -> String {
+    func positionalRegex(_ wordLength: Int) -> String {
         return reduce(into: Array(repeating: Positional.misplaced([]), count: wordLength)) { partialResult, fact in
             switch fact {
             case let .placedAt(char, loc):
@@ -140,6 +199,18 @@ extension Collection where Element == Fact {
                 if case let .misplaced(excluded) = partialResult[loc] {
                     partialResult[loc] = .misplaced(excluded + [char])
                 }
+            case let .excludeWhereNotPlaced(char):
+                
+                partialResult.enumerated().forEach { (index, value) in
+                    if case .placed = value {
+                        return
+                    }
+                    if case let .misplaced(excluded) = partialResult[index] {
+                        partialResult[index] = .misplaced(excluded + [char])
+                    }
+                }
+            case .minimumOccurrenceCount(_, _):
+                break
             }
         }.reduce(into: String(), { partialResult, positional in
             switch positional {
@@ -154,6 +225,11 @@ extension Collection where Element == Fact {
             }
         })
     }
+    
+    func consolidateFacts() -> Self {
+        return self
+    }
+    
 }
 
 // MARK: - User Input
@@ -269,7 +345,7 @@ extension Turn {
 // MARK: - grep Filtering
 
 extension WordList {
-    func filterMatching(_ pattern: String, invert: Bool = false) throws -> WordList {
+    func filterMatching(_ pattern: String, grepURL: URL, invert: Bool = false) throws -> WordList {
         let p = Process()
         p.executableURL = grepURL
         
@@ -281,6 +357,7 @@ extension WordList {
         
         try p.run()
         try stdIn.fileHandleForWriting.write(contentsOf: self.data)
+        try stdIn.fileHandleForWriting.write(contentsOf: "\n".data(using: .utf8)!)
         try stdIn.fileHandleForWriting.close()
         
         p.waitUntilExit()
