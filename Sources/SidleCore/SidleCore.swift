@@ -35,7 +35,7 @@ public enum Fact: Hashable {
     case minimumOccurrenceCount(Character, Int)
 }
 
-public struct Turn {
+public struct Turn: Hashable {
     
     public init(guess: String, feedback: [Turn.Feedback]) {
         self.guess = guess
@@ -45,7 +45,7 @@ public struct Turn {
     public let guess: String
     public let feedback: [Feedback]
     
-    public enum Feedback: Character {
+    public enum Feedback: Character, Hashable {
         case hit = "="
         case miss = "-"
         case misplaced = "."
@@ -104,7 +104,7 @@ public struct Turn {
     }
 }
 
-enum Positional {
+enum Positional: Hashable {
     case misplaced([Character])
     case placed(Character)
 }
