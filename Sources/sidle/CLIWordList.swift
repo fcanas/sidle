@@ -26,7 +26,7 @@ struct DataWordList: WordList {
         self.grepURL = URL(fileURLWithPath: "/usr/bin/grep")
     }
     
-    init(_ listPath: String = "/usr/share/dict/words", _ grepURL: URL = URL(fileURLWithPath: "/usr/bin/grep")) throws {
+    init(_ listPath: String, _ grepURL: URL = URL(fileURLWithPath: "/usr/bin/grep")) throws {
         guard
             let data = FileManager.default.contents(atPath: listPath)
         else {

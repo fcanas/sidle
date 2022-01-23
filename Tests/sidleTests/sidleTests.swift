@@ -14,7 +14,7 @@ final class sidleTests: XCTestCase {
     
     func testWordListInitialization() throws {
         XCTAssertThrowsError(try DataWordList("/\(UUID().uuidString)"))
-        XCTAssertGreaterThan(try DataWordList().words.count, 100)
+        XCTAssertGreaterThan(try DataWordList("/usr/share/dict/words").words.count, 100)
     }
     
     func testWordListFiltering() throws {

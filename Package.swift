@@ -11,6 +11,7 @@ let package = Package(
     ],
     dependencies: [
          .package(url: "https://github.com/jdhealy/PrettyColors", from: "5.0.2"),
+         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.2")
     ],
     targets: [
         .target(
@@ -19,7 +20,9 @@ let package = Package(
         ),
         .executableTarget(
             name: "sidle",
-            dependencies: ["SidleCore", "PrettyColors"]
+            dependencies: ["SidleCore",
+                           "PrettyColors",
+                           .product(name: "ArgumentParser", package: "swift-argument-parser")]
             ),
         .testTarget(
             name: "sidleTests",
