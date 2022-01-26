@@ -6,6 +6,19 @@ A [WORDLE](https://www.powerlanguage.co.uk/wordle/) assistant.
 2. `sidle` uses `/usr/share/dict/words`, not the WORDLE dictionary.
 3. Even if the dictionary were correct, the optimal move may not be in the presented list of words.
 
+## Installing
+
+The `sidle` CLI tool is available via a [Homebrew](https://brew.sh) [tap](https://docs.brew.sh/Taps#the-brew-tap-command):
+
+`brew install fcanas/tap/sidle`
+
+or
+
+```
+brew tap fcanas/tap
+brew install sidle
+```
+
 ## Instructions
 
 On running `sidle`, you're prompted for a 5-letter guess.
