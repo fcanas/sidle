@@ -64,3 +64,76 @@ extension Turn {
 		}
 	}
 }
+
+extension Dictionary where Value == Int {
+	/// Formats a histogram for display on a console.
+	/// - Parameter maxIn: Range of display. If nil, the maximum value in the histogram is used.
+	/// - Returns: A dictionary with the receiver's keys and a horizontal bar fill string as the value.
+	func asDisplayBarChart(_ maxIn: Int? = nil) -> [Key: String] {
+
+		let max = maxIn ?? values.max() ?? 1
+
+		let screenWidth: Int
+		var w = winsize()
+		if ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 {
+			screenWidth = Int(Swift.min(w.ws_col - 4, 80 - 4))
+		} else {
+			screenWidth = 80 - 4
+		}
+
+		let unitPerCharacter = Double(max) / Double(screenWidth)
+
+		return [Key: String](
+			uniqueKeysWithValues: map { (key, count) in
+				let unitCharacters = Int(floor(Double(count) / unitPerCharacter))
+				let countString = "\(count)"
+				let remainder = Double(count).remainder(
+					dividingBy: unitPerCharacter)
+				let bar =
+					{
+						if unitCharacters >= countString.count {
+							String(
+								Array(
+									repeating: "█",
+									count: unitCharacters
+										- countString.count)
+							)
+								+ Color.Wrap(styles: .negative)
+								.wrap(
+									countString)
+						} else {
+							String(
+								Array(
+									repeating: "█",
+									count: unitCharacters))
+						}
+					}()
+					+ fractionalHorizontalFill(
+						for: remainder / unitPerCharacter)
+				let countWidth = unitCharacters
+				let space =
+					screenWidth - countWidth > 0
+					? String(
+						Array(
+							repeating: " ",
+							count: screenWidth - countWidth)) : ""
+				return (key, "\(bar)\(space)|")
+			})
+	}
+}
+
+/// Returns a single character representing the fraction of a horizontal unit for a bar fill.
+/// - Parameter fraction: percentage of a horizontal character to fill (0.0 to 1.0) from left to right.
+/// - Returns: A single-character string proportionally filled from the left.
+func fractionalHorizontalFill(for fraction: Double) -> String {
+	let increments = "  ▏▎▍▌▋▊▉█"
+	let bucketRanges: [Range<Double>] =
+		(0..<(increments.count)).map({ (i: Int) -> Range<Double> in
+			Double(i) / Double(increments.count)..<Double(i + 1)
+				/ Double(increments.count)
+		})
+	guard
+		let index = bucketRanges.firstIndex(where: { $0.contains(fraction) })
+	else { return "█" }
+	return String(increments[increments.index(increments.startIndex, offsetBy: index)])
+}

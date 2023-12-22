@@ -27,3 +27,25 @@ public class StringWordList: WordList {
 			})
 	}
 }
+
+extension WordList {
+	public func wordWiseHistogram() -> [Character: Int] {
+		var histogram: [Character: Int] = [:]
+		for word in words {
+			for letter in word.removeDuplicates() {
+				if !letter.isLetter {
+					continue
+				}
+				histogram[letter, default: 0] += 1
+			}
+		}
+		return histogram
+	}
+}
+
+extension String {
+	func removeDuplicates() -> String {
+		var used = Set<Character>()
+		return filter { used.insert($0).inserted }
+	}
+}

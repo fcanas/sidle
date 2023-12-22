@@ -28,19 +28,69 @@ struct Sidle: ParsableCommand {
 		var turns: [Turn] = []
 		while true {
 			let turn = try Turn.get(wordLength: wordLength)
-			turns.append(turn)
-			accumulatedFacts.formUnion(turn.facts())
 
-			let localList = try wordList.filter(
-				with: accumulatedFacts, wordLength: wordLength)
+			switch turn {
+			case .guess(let turn):
 
-			print(localList.display(wordLength: wordLength))
+				do {
 
-			try turns.forEach { t throws in
-				print("\(t.display())")
-			}
-			if localList.words.count == 1 {
-				break
+					let localList = try wordList.filter(
+						with: accumulatedFacts.union(turn.facts()),
+						wordLength: wordLength)
+
+					turns.append(turn)
+					accumulatedFacts.formUnion(turn.facts())
+
+					print(localList.display(wordLength: wordLength))
+
+					try turns.forEach { t throws in
+						print("\(t.display())")
+					}
+					if localList.words.count == 1 {
+						break
+					}
+				} catch let error as String {
+					print(error)
+				}
+			case .query(let query):
+				do {
+					let localList = try wordList.filter(
+						with: accumulatedFacts, wordLength: wordLength)
+
+					switch query {
+					case "":
+						let hist = localList.wordWiseHistogram()
+							.asDisplayBarChart(
+								localList.words.count)
+						print(
+							hist.keys.sorted().reduce(into: "") {
+								(str, letter) in
+								str +=
+									"\(letter):\(hist[letter]!)\n"
+							})
+					case let y:
+
+						let hypotheticalFacts = accumulatedFacts.union(
+							y.map { Fact.minimumOccurrenceCount($0, 1) }
+						)
+						let localList = try wordList.filter(
+							with: hypotheticalFacts,
+							wordLength: wordLength)
+
+						print(localList.display(wordLength: wordLength))
+						let hist = localList.wordWiseHistogram()
+							.asDisplayBarChart(
+								localList.words.count)
+						print(
+							hist.keys.sorted().reduce(into: "") {
+								(str, letter) in
+								str +=
+									"\(letter):\(hist[letter]!)\n"
+							})
+					}
+				} catch let error as String {
+					print(error)
+				}
 			}
 		}
 	}

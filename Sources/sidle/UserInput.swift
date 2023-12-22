@@ -1,12 +1,21 @@
 import SidleCore
 
 extension Turn {
-	static func get(wordLength: Int) throws -> Turn {
+	static func get(wordLength: Int) throws -> Input<Turn> {
 		while true {
 			do {
-				return Turn(
-					guess: try getGuess(wordLength: wordLength),
-					feedback: try Turn.Feedback.get(wordLength: wordLength))
+
+				let input = try getGuess(wordLength: wordLength)
+				switch input {
+				case .guess(let guess):
+					return .guess(
+						Turn(
+							guess: guess,
+							feedback: try Turn.Feedback.get(
+								wordLength: wordLength)))
+				case .query(let query):
+					return .query(query)
+				}
 			} catch let error as String {
 				print(error)
 				continue
@@ -15,15 +24,26 @@ extension Turn {
 	}
 }
 
-func getGuess(wordLength: Int) throws -> String {
+enum Input<T> {
+	case guess(T)
+	case query(String)
+}
+
+func getGuess(wordLength: Int) throws -> Input<String> {
 	print("Guess:")
 	guard
-		let input = readLine(),
-		input.count == wordLength
+		let input = readLine()
 	else {
-		throw "Word must be \(wordLength) characters."
+		throw "Guess must be \(wordLength) characters, or command starting with ?"
 	}
-	return input
+
+	if input.starts(with: "?") {
+		return .query(String(input.dropFirst()))
+	} else if input.count == wordLength {
+		return .guess(input)
+	} else {
+		throw "Guess must be \(wordLength) characters, or command starting with ?"
+	}
 }
 
 extension Turn.Feedback {

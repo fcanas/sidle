@@ -28,6 +28,19 @@ class SidleCoreTests: XCTestCase {
 
 	}
 
+	func testHistogram() throws {
+		let list = StringWordList(words: [
+			"renet", "seedy", "teems", "weedy", "belie", "bells", "zeeep",
+		])
+		let histogram = list.wordWiseHistogram()
+		XCTAssertEqual(
+			histogram,
+			[
+				"d": 2, "i": 1, "l": 2, "z": 1, "y": 2, "r": 1, "s": 3, "m": 1,
+				"e": 7, "b": 2, "p": 1, "w": 1, "n": 1, "t": 2,
+			])
+	}
+
 	/// https://twitter.com/fcanas/status/1482162130191269890
 	/// Today I discovered an additional source of information in wordle.
 	/// Consider the following simulated/redacted game I observed:

@@ -23,6 +23,46 @@ final class sidleTests: XCTestCase {
 		XCTAssertGreaterThan(try DataWordList("/usr/share/dict/words").words.count, 100)
 	}
 
+	func testBarChart() throws {
+		let list = StringWordList(words: [
+			"renet", "seedy", "teems", "weedy", "belie", "bells", "zeeep",
+		])
+		let histogram = list.wordWiseHistogram()
+		let barChart = histogram.asDisplayBarChart()
+		XCTAssertEqual(
+			barChart,
+			[
+				"m":
+					"█████████\u{1B}[7m1\u{1B}[0m█                                                                  |",
+				"i":
+					"█████████\u{1B}[7m1\u{1B}[0m█                                                                  |",
+				"n":
+					"█████████\u{1B}[7m1\u{1B}[0m█                                                                  |",
+				"z":
+					"█████████\u{1B}[7m1\u{1B}[0m█                                                                  |",
+				"t":
+					"████████████████████\u{1B}[7m2\u{1B}[0m█                                                       |",
+				"e":
+					"███████████████████████████████████████████████████████████████████████████\u{1B}[7m7\u{1B}[0m |",
+				"r":
+					"█████████\u{1B}[7m1\u{1B}[0m█                                                                  |",
+				"b":
+					"████████████████████\u{1B}[7m2\u{1B}[0m█                                                       |",
+				"s":
+					"███████████████████████████████\u{1B}[7m3\u{1B}[0m█                                            |",
+				"p":
+					"█████████\u{1B}[7m1\u{1B}[0m█                                                                  |",
+				"w":
+					"█████████\u{1B}[7m1\u{1B}[0m█                                                                  |",
+				"y":
+					"████████████████████\u{1B}[7m2\u{1B}[0m█                                                       |",
+				"d":
+					"████████████████████\u{1B}[7m2\u{1B}[0m█                                                       |",
+				"l":
+					"████████████████████\u{1B}[7m2\u{1B}[0m█                                                       |",
+			])
+	}
+
 	func testWordListFiltering() throws {
 
 		let list = DataWordList(words: [
